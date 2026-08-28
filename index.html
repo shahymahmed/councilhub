@@ -1,55 +1,17 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0f172a">
-  <title>Council Digital Monitoring Platform</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>CouncilHub — Dhaandhoo Council</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="app">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">C</div>
-        <div><strong>Council Hub</strong><span>Digital Monitoring Platform</span></div>
-      </div>
-      <nav id="nav">
-        <button class="nav-item active" data-view="dashboard">⌂ <span>Dashboard</span></button>
-        <button class="nav-item" data-view="tasks">✓ <span>Tasks & Instructions</span></button>
-        <button class="nav-item" data-view="projects">▦ <span>Projects</span></button>
-        <button class="nav-item" data-view="events">★ <span>Events</span></button>
-        <button class="nav-item" data-view="calendar">◷ <span>Schedule</span></button>
-        <button class="nav-item" data-view="team">♙ <span>Team</span></button>
-        <button class="nav-item" data-view="activity">↻ <span>Activity Log</span></button>
-      </nav>
-      <div class="sidebar-bottom">
-        <div class="mini-user"><div class="avatar">SA</div><div><b id="loggedUserName">Signed-in user</b><span id="loggedUserRole">Council staff</span></div></div>
-        <small>Prototype • Local data</small>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <button class="mobile-menu" id="mobileMenu">☰</button>
-        <div>
-          <h1 id="pageTitle">Dashboard</h1>
-          <p id="pageSubtitle">Council-wide monitoring and accountability</p>
-        </div>
-        <div class="top-actions">
-          <button class="icon-btn" id="notifBtn" title="Notifications">🔔<i id="notifDot"></i></button>
-          <button class="primary" id="quickAdd">＋ New</button>
-        </div>
-      </header>
-      <section id="content"></section>
-    </main>
-  </div>
-
-  <div class="modal-backdrop hidden" id="modalBackdrop">
-    <div class="modal" id="modal"></div>
-  </div>
-  <div class="toast hidden" id="toast"></div>
-  <script src="app.js"></script>
+<div id="app"></div>
+<div id="toast"></div>
+<div id="modalBackdrop" class="modal-backdrop hidden" aria-hidden="true"><div id="modal"></div></div>
+<script src="app.js"></script>
 </body>
 </html>
