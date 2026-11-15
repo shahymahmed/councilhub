@@ -118,9 +118,9 @@ async function patchEventTaskWorkRemote(eventId,taskId,progress,status){
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400)}
 function initials(n){return String(n||"").split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase()}
-function isAdmin(){return !!current && ADMIN_IDS.includes(String(current.id))}
-function canAssign(){return isAdmin() || !!current?.canAssign}
-function canManage(){return isAdmin() || !!current?.canAssign}
+function isAdmin(){return !!current && !current.isGuest && ADMIN_IDS.includes(String(current.id))}
+function canAssign(){return !current?.isGuest && (isAdmin() || !!current?.canAssign)}
+function canManage(){return !current?.isGuest && (isAdmin() || !!current?.canAssign)}
 function staffById(id){return STAFF.find(s=>String(s.id)===String(id))}
 function daysRemaining(date){if(!date)return null;return Math.ceil((new Date(date+"T23:59:59")-new Date())/86400000)}
 function durationDays(start,end){if(!start||!end)return 0;return Math.max(0,Math.ceil((new Date(end)-new Date(start))/86400000)+1)}
@@ -152,12 +152,32 @@ function login(){
  <input id="loginId" placeholder="ID number (e.g. 48627)" autocomplete="username">
  <button class="primary full" id="loginBtn">Sign in</button>
  <div id="loginError" class="login-error hidden"></div>
- <div class="notice" style="margin-top:14px">Real staff directory only. Tasks, projects and events start empty.</div>
+ <div class="notice" style="margin-top:14px">Staff sign-in uses your registered mobile number and ID number.</div>
+ <div class="demo-login"><h2>Presentation access</h2><p>Temporary read-only guest account</p>
+ <input id="demoUsername" placeholder="Guest username" autocomplete="username">
+ <input id="demoPassword" type="password" placeholder="Guest password" autocomplete="current-password">
+ <button class="secondary full" id="demoLoginBtn">Sign in as Guest</button>
+ <div id="demoLoginError" class="login-error hidden"></div>
+ </div>
  </div></div>`;
  const btn=document.getElementById("loginBtn");
  btn.onclick=doLogin;
+ document.getElementById("demoLoginBtn").onclick=doGuestLogin;
+ document.getElementById("demoUsername").onkeydown=e=>{if(e.key==="Enter")doGuestLogin()};
+ document.getElementById("demoPassword").onkeydown=e=>{if(e.key==="Enter")doGuestLogin()};
  document.getElementById("loginPhone").onkeydown=e=>{if(e.key==="Enter")doLogin()};
  document.getElementById("loginId").onkeydown=e=>{if(e.key==="Enter")doLogin()};
+}
+function doGuestLogin(){
+ const username=document.getElementById("demoUsername").value.trim();
+ const password=document.getElementById("demoPassword").value;
+ const err=document.getElementById("demoLoginError");
+ if(username!=="user" || password!=="123"){
+  err.textContent="Guest username or password is incorrect.";err.classList.remove("hidden");return;
+ }
+ current={id:"DEMO-GUEST",name:"Presentation Guest",phone:"",category:"Temporary Guest",position:"View-only access",canAssign:false,isAdmin:false,isGuest:true};
+ localStorage.setItem("councilhub_session","DEMO-GUEST|");
+ renderShell();
 }
 function normalizePhone(value){
  const digits=String(value||"").replace(/\D/g,"");
@@ -181,6 +201,7 @@ function doLogin(){
 
 function boot(){
  const raw=localStorage.getItem("councilhub_session");
+ if(raw==="DEMO-GUEST|"){current={id:"DEMO-GUEST",name:"Presentation Guest",phone:"",category:"Temporary Guest",position:"View-only access",canAssign:false,isAdmin:false,isGuest:true};return renderShell()}
  if(raw){const [id,phone]=raw.split("|");const s=STAFF.find(x=>String(x.id)===id&&x.phone===phone);if(s){current=s;return renderShell()}}
  login();
 }
@@ -192,18 +213,17 @@ function renderShell(){
  ${nav("dashboard","⌂","Dashboard")}${nav("tasks","✓",canAssign()?"Tasks":"My Tasks")}${nav("projects","▦","Projects")}${nav("events","📅","Events")}${nav("schedule","14","14-Day Schedule")}${nav("staff","👥","Staff")}${nav("reports","📊","Reports")}${isAdmin()?nav("admin","⚙","Administration"):""}
  </nav>
  <div class="side-bottom"><div class="user-mini"><div class="avatar">${initials(current.name)}</div><div><b>${esc(current.name)}</b><small>${esc(current.position||current.category)}${isAdmin()?" • ADMIN":""}</small></div></div><button class="secondary full" id="logout">Sign out</button></div></aside>
- <main class="main"><header class="topbar"><div style="display:flex;align-items:center;gap:10px"><button class="mobile-menu" id="menu">☰</button><div><h1 id="title">Dashboard</h1><p id="subtitle">Dhaandhoo Council</p></div></div><div class="top-actions"><button class="icon push-button" id="pushBtn" title="Enable phone notifications">🔕</button><button class="icon" id="refresh">↻</button>${canAssign()?'<button class="primary" id="quickAdd">＋ New</button>':""}</div></header><section class="content" id="content"></section></main></div>`;
+ <main class="main"><header class="topbar"><div style="display:flex;align-items:center;gap:10px"><button class="mobile-menu" id="menu">☰</button><div><h1 id="title">Dashboard</h1><p id="subtitle">Dhaandhoo Council</p></div></div><div class="top-actions">${current.isGuest?"":'<button class="icon push-button" id="pushBtn" title="Enable phone notifications">🔕</button>'}<button class="icon" id="refresh">↻</button>${canAssign()?'<button class="primary" id="quickAdd">＋ New</button>':""}</div></header><section class="content" id="content"></section></main></div>`;
  document.getElementById("logout").onclick=()=>{localStorage.removeItem("councilhub_session");current=null;login()};
  const sidebarEl=document.getElementById("sidebar");
  const backdropEl=document.getElementById("backdrop");
  document.getElementById("menu").onclick=()=>{sidebarEl.classList.toggle("open");backdropEl.classList.toggle("show")};
  backdropEl.onclick=closeSidebar;
- document.getElementById("refresh").onclick=()=>{state=loadState();renderPage();loadRemoteWorkspace();toast("Refreshing shared workspace…")};
+ document.getElementById("refresh").onclick=()=>{state=loadState();renderPage();if(!current.isGuest)loadRemoteWorkspace();toast(current.isGuest?"Demo view refreshed.":"Refreshing shared workspace…")};
  document.getElementById("quickAdd")?.addEventListener("click",()=>showQuickAdd());
  document.querySelectorAll("[data-page]").forEach(b=>b.addEventListener("click",()=>{page=b.dataset.page;closeSidebar();renderPage()}));
  renderPage();
- initPush();
- loadRemoteWorkspace();
+ if(!current.isGuest){initPush();loadRemoteWorkspace();}
  const taskParam=new URLSearchParams(location.search).get("task");
  if(taskParam)setTimeout(()=>openTask(taskParam),650);
 }
@@ -218,7 +238,7 @@ function renderPage(){
 function kpi(n,v,note){return `<div class="kpi"><b>${v}</b><span>${n}</span><div class="sub">${note||""}</div></div>`}
 function dashboard(){
  setTitle("Dashboard",canAssign()?"CouncilHub workspace":"My Tasks and Council updates");
- const my=state.tasks.filter(t=>t.assignees?.includes(current.id));
+ const my=current.isGuest?state.tasks:state.tasks.filter(t=>t.assignees?.includes(current.id));
  const ongoing=my.filter(t=>t.status!=="Completed");
  const completed=my.filter(t=>t.status==="Completed");
  const todayKey=today();
@@ -229,7 +249,7 @@ function dashboard(){
  const taskSection=(title,items,empty,action)=>`<div class="card dashboard-task-card"><div class="page-head"><div><h2>${title}</h2><p>${action||"Your assigned work"}</p></div>${items.length?`<button class="secondary" onclick="page='tasks';renderPage()">View all</button>`:""}</div>${items.slice(0,7).map(taskRow).join("")||`<div class="empty">${empty}</div>`}</div>`;
  const eventSection=`<div class="card dashboard-event-card"><div class="page-head"><div><h2>Upcoming Events</h2><p>Next Council events</p></div><button class="secondary" onclick="page='events';renderPage()">View events</button></div>${upcomingEvents.map(e=>`<div class="row clickable event-row" onclick="openEvent('${e.id}')"><div><b>${esc(e.name)}</b><div class="sub">${fmtDate(e.start)}${e.venue?" • "+esc(e.venue):""}</div></div><span class="badge orange">EVENT</span></div>`).join("")||'<div class="empty">No upcoming events.</div>'}</div>`;
  document.getElementById("content").innerHTML=`
- <div class="hero dashboard-hero"><div><span class="badge ${canAssign()?"blue":"green"}">${canAssign()?"STAFF + ASSIGNER":"MY WORK"}</span><h2>Welcome, ${esc(current.name)}</h2><p>${roleText}</p></div>${canAssign()?'<button class="primary" onclick="openTaskForm()">＋ Assign Task</button>':""}</div>
+ <div class="hero dashboard-hero"><div><span class="badge ${current.isGuest?"orange":canAssign()?"blue":"green"}">${current.isGuest?"TEMPORARY GUEST — VIEW ONLY":canAssign()?"STAFF + ASSIGNER":"MY WORK"}</span><h2>Welcome, ${esc(current.name)}</h2><p>${current.isGuest?"Presentation access. You can view CouncilHub information but cannot add, edit or delete anything.":roleText}</p></div>${canAssign()?'<button class="primary" onclick="openTaskForm()">＋ Assign Task</button>':""}</div>
  <div class="grid kpis dashboard-kpis">
    ${kpi("My Ongoing",ongoing.length,"Tasks still in progress")}
    ${kpi("My Completed",completed.length,"Tasks completed")}
@@ -374,7 +394,7 @@ async function enableAlerts(){if("Notification" in window){const p=await Notific
 function testSound(){if(!state.alerts.sound)return toast("Sound is disabled.");try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return toast("Audio is not supported.");const c=new C(),o=c.createOscillator(),g=c.createGain();o.frequency.value=880;g.gain.setValueAtTime(.0001,c.currentTime);g.gain.exponentialRampToValueAtTime(.2,c.currentTime+.03);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.5);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.55);toast("Alarm sound tested.")}catch(e){toast("Could not play sound.")}}
 function runAlerts(){const now=new Date();state.tasks.forEach(t=>{if(t.status==="Completed"||!t.due)return;const due=new Date(t.due+"T09:00:00"),mins=(due-now)/60000,key="task:"+t.id+":"+t.due;if(mins>=0&&mins<=state.alerts.minutes&&!localStorage.getItem("alarm:"+key)){localStorage.setItem("alarm:"+key,"1");if(state.alerts.sound)testSound();if(state.alerts.browser&&"Notification" in window&&Notification.permission==="granted")new Notification("CouncilHub — Task due soon",{body:t.title})}})}
 setInterval(runAlerts,30000);
-setInterval(()=>{if(current && !document.body.classList.contains("modal-open")) loadRemoteWorkspace()},30000);
+setInterval(()=>{if(current && !current.isGuest && !document.body.classList.contains("modal-open")) loadRemoteWorkspace()},30000);
 window.addEventListener("resize",()=>{if(window.innerWidth>720)closeSidebar()});
 window.addEventListener("orientationchange",()=>setTimeout(()=>{if(window.innerWidth>720)closeSidebar()},100));
 boot();
