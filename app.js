@@ -144,7 +144,24 @@ function closeModal(){
 document.getElementById("modalBackdrop").addEventListener("click",e=>{if(e.target.id==="modalBackdrop")closeModal()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
 
+const IS_GUEST_PORTAL = /\/guest\/?$/.test(window.location.pathname);
 function login(){
+ if(IS_GUEST_PORTAL){
+  document.getElementById("app").innerHTML=`<div class="login"><div class="login-card">
+   <div class="brand"><div class="brand-mark">C</div><div><b>CouncilHub</b><span>GA. Dhaandhoo Council</span></div></div>
+   <h1>Guest Demo Sign In</h1><p>Temporary presentation access.</p>
+   <input id="demoUsername" placeholder="Username" autocomplete="username">
+   <input id="demoPassword" type="password" placeholder="Password" autocomplete="current-password">
+   <button class="primary full" id="demoLoginBtn">Sign in to Demo</button>
+   <div id="demoLoginError" class="login-error hidden"></div>
+   <div class="notice" style="margin-top:14px">Demo access is temporary and intended only for presentation use.</div>
+   <a class="sub" style="display:block;margin-top:16px;text-align:center" href="/">CouncilHub staff login</a>
+  </div></div>`;
+  document.getElementById("demoLoginBtn").onclick=doGuestLogin;
+  document.getElementById("demoUsername").onkeydown=e=>{if(e.key==="Enter")doGuestLogin()};
+  document.getElementById("demoPassword").onkeydown=e=>{if(e.key==="Enter")doGuestLogin()};
+  return;
+ }
  document.getElementById("app").innerHTML=`<div class="login"><div class="login-card">
  <div class="brand"><div class="brand-mark">C</div><div><b>CouncilHub</b><span>GA. Dhaandhoo Council</span></div></div>
  <h1>Staff Sign In</h1><p>Enter your 7-digit registered mobile number and ID number.</p>
@@ -153,18 +170,8 @@ function login(){
  <button class="primary full" id="loginBtn">Sign in</button>
  <div id="loginError" class="login-error hidden"></div>
  <div class="notice" style="margin-top:14px">Staff sign-in uses your registered mobile number and ID number.</div>
- <div class="demo-login"><h2>Presentation access</h2><p>Temporary read-only guest account</p>
- <input id="demoUsername" placeholder="Guest username" autocomplete="username">
- <input id="demoPassword" type="password" placeholder="Guest password" autocomplete="current-password">
- <button class="secondary full" id="demoLoginBtn">Sign in as Guest</button>
- <div id="demoLoginError" class="login-error hidden"></div>
- </div>
  </div></div>`;
- const btn=document.getElementById("loginBtn");
- btn.onclick=doLogin;
- document.getElementById("demoLoginBtn").onclick=doGuestLogin;
- document.getElementById("demoUsername").onkeydown=e=>{if(e.key==="Enter")doGuestLogin()};
- document.getElementById("demoPassword").onkeydown=e=>{if(e.key==="Enter")doGuestLogin()};
+ document.getElementById("loginBtn").onclick=doLogin;
  document.getElementById("loginPhone").onkeydown=e=>{if(e.key==="Enter")doLogin()};
  document.getElementById("loginId").onkeydown=e=>{if(e.key==="Enter")doLogin()};
 }
@@ -176,7 +183,7 @@ function doGuestLogin(){
   err.textContent="Guest username or password is incorrect.";err.classList.remove("hidden");return;
  }
  current={id:"DEMO-GUEST",name:"Presentation Guest",phone:"",category:"Temporary Guest",position:"View-only access",canAssign:false,isAdmin:false,isGuest:true};
- localStorage.setItem("councilhub_session","DEMO-GUEST|");
+ localStorage.setItem("councilhub_guest_session","DEMO-GUEST|");
  renderShell();
 }
 function normalizePhone(value){
@@ -200,6 +207,11 @@ function doLogin(){
 }
 
 function boot(){
+ if(IS_GUEST_PORTAL){
+  const raw=localStorage.getItem("councilhub_guest_session");
+  if(raw==="DEMO-GUEST|"){current={id:"DEMO-GUEST",name:"Presentation Guest",phone:"",category:"Temporary Guest",position:"View-only access",canAssign:false,isAdmin:false,isGuest:true};return renderShell()}
+  login();return;
+ }
  const raw=localStorage.getItem("councilhub_session");
  if(raw==="DEMO-GUEST|"){current={id:"DEMO-GUEST",name:"Presentation Guest",phone:"",category:"Temporary Guest",position:"View-only access",canAssign:false,isAdmin:false,isGuest:true};return renderShell()}
  if(raw){const [id,phone]=raw.split("|");const s=STAFF.find(x=>String(x.id)===id&&x.phone===phone);if(s){current=s;return renderShell()}}
@@ -214,7 +226,7 @@ function renderShell(){
  </nav>
  <div class="side-bottom"><div class="user-mini"><div class="avatar">${initials(current.name)}</div><div><b>${esc(current.name)}</b><small>${esc(current.position||current.category)}${isAdmin()?" • ADMIN":""}</small></div></div><button class="secondary full" id="logout">Sign out</button></div></aside>
  <main class="main"><header class="topbar"><div style="display:flex;align-items:center;gap:10px"><button class="mobile-menu" id="menu">☰</button><div><h1 id="title">Dashboard</h1><p id="subtitle">Dhaandhoo Council</p></div></div><div class="top-actions">${current.isGuest?"":'<button class="icon push-button" id="pushBtn" title="Enable phone notifications">🔕</button>'}<button class="icon" id="refresh">↻</button>${canAssign()?'<button class="primary" id="quickAdd">＋ New</button>':""}</div></header><section class="content" id="content"></section></main></div>`;
- document.getElementById("logout").onclick=()=>{localStorage.removeItem("councilhub_session");current=null;login()};
+ document.getElementById("logout").onclick=()=>{localStorage.removeItem(IS_GUEST_PORTAL?"councilhub_guest_session":"councilhub_session");current=null;login()};
  const sidebarEl=document.getElementById("sidebar");
  const backdropEl=document.getElementById("backdrop");
  document.getElementById("menu").onclick=()=>{sidebarEl.classList.toggle("open");backdropEl.classList.toggle("show")};
